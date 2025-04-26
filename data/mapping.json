@@ -1,0 +1,28 @@
+{
+  "index": "student-index-v2",
+  "field_mapping": {
+    "name": "name",
+    "age": "age",
+    "grade": "grade",
+    "class": "class",
+    "section": "section",
+    "extra_info.father_name": "father_name",
+    "extra_info.mother_name": "mother_name",
+    "extra_info.address": "address",
+    "extra_info.hobby": "hobby"
+  },
+  "default_values": {
+    "is_current_student": true
+  },
+  "random_generate": {
+    "height": {
+      "type": "integer",
+      "min": 160,
+      "max": 180
+    },
+    "extra_info.religion": {
+      "type": "keyword",
+      "values": ["islam", "hindu"]
+    }
+  }
+}
