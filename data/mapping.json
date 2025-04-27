@@ -24,5 +24,8 @@
       "type": "keyword",
       "values": ["islam", "hindu"]
     }
+  },
+  "file": {
+    "path": "./data/data.csv"
   }
 }

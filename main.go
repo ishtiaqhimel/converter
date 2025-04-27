@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"log"
@@ -35,6 +36,7 @@ type FieldMapping struct {
 	FieldMapping   map[string]string                 `json:"field_mapping"`
 	DefaultValues  map[string]interface{}            `json:"default_values"`
 	RandomGenerate map[string]map[string]interface{} `json:"random_generate"`
+	File           map[string]string                 `json:"file"`
 }
 
 func main() {
@@ -112,6 +114,22 @@ func main() {
 			insertFieldValue(newSource, strings.Split(key, "."), generateRandomValue(rn, config))
 		}
 
+		for key, val := range mapping.File {
+			fileData := map[string]interface{}{}
+			dataMapByID := map[string]map[string]interface{}{}
+			if key == "path" {
+				if val == "" {
+					log.Fatal("file path is empty for", key)
+				}
+				dataMapByID = extractFileData(fileData, val)
+				if value, ok := dataMapByID[*doc.ID]; ok {
+					for v, k := range value {
+						insertFieldValue(newSource, strings.Split(v, "."), k)
+					}
+				}
+			}
+		}
+
 		newDoc := ESDoc{
 			ESMeta: ESMeta{
 				Index: mapping.Index,
@@ -174,6 +192,50 @@ func insertFieldValue(data map[string]interface{}, path []string, value interfac
 		value = nil
 	}
 	data[path[len(path)-1]] = value
+}
+
+func extractFileData(fileData map[string]interface{}, filePath string) map[string]map[string]interface{} {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(file *os.File) {
+		err = file.Close()
+		if err != nil {
+			log.Fatal("failed to close file", err)
+		}
+	}(file)
+
+	records, err := csv.NewReader(file).ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	headers := records[0]
+	idIndex := -1
+	for i, header := range headers {
+		if header == "id" {
+			idIndex = i
+			break
+		}
+	}
+
+	if idIndex == -1 {
+		log.Fatal("id column not found")
+	}
+
+	dataMapByID := make(map[string]map[string]interface{})
+	for _, row := range records[1:] {
+		id := row[idIndex]
+		fields := make(map[string]interface{})
+		for i, header := range headers {
+			if i != idIndex {
+				fields[header] = row[i]
+			}
+		}
+		dataMapByID[id] = fields
+	}
+	return dataMapByID
 }
 
 func generateRandomValue(rn *rand.Rand, config map[string]interface{}) interface{} {
